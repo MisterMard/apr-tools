@@ -1,6 +1,7 @@
-import { ethers } from "ethers";
+import { BigNumber, Contract, ethers } from "ethers";
 import {
   Contract as MulticallContract,
+  ContractCall,
   Provider as MulticallProvider,
 } from "ethers-multicall";
 import { TokenObject } from "../components/Prices";
@@ -25,7 +26,7 @@ interface Token {
   address: string;
   decimals?: number;
   totalSupply?: number;
-  reserve?: number;
+  reserve?: number | BigNumber;
   type?: TokenType;
 }
 
@@ -33,7 +34,7 @@ export interface MasterChefArgs {
   name: string;
   chefAddress: string;
   rewardTokenAddress: string;
-  chefAbi: any,
+  chefAbi: any;
   rewardRateFunctionString: string;
 }
 
@@ -101,8 +102,15 @@ export class StakingContract {
     this.contractAddr = args.chefAddress;
     this.provider = provider;
     this.multicallProvider = multicallProvider;
-    this.contract = new ethers.Contract(args.chefAddress, args.chefAbi, this.provider);
-    this.multicallContract = new MulticallContract(args.chefAddress, args.chefAbi);
+    this.contract = new ethers.Contract(
+      args.chefAddress,
+      args.chefAbi,
+      this.provider
+    );
+    this.multicallContract = new MulticallContract(
+      args.chefAddress,
+      args.chefAbi
+    );
     this.rewardToken = rewardToken;
     this.rewardRateFunction = args.rewardRateFunctionString;
     // this.fillPropsAsync();
@@ -142,13 +150,16 @@ export class StakingContract {
     });
 
     // Get lp tokens types
-    await Promise.all(pools.map(async (pool, idx) => {
-      const poolType = getFantomTokenType(this, pool.lp.address);
-      pools[idx]["lpType"] = await poolType;
-    }))
+    await Promise.all(
+      pools.map(async (pool, idx) => {
+        const poolType = getFantomTokenType(this, pool.lp.address);
+        pools[idx]["lpType"] = await poolType;
+      })
+    );
 
     // Aggregate all pools calls into a single list
-    const calls = pools.map((pool, i) => {
+    const calls = pools
+      .map((pool, i) => {
         const poolCalls: any[] = [];
         var poolContract: MulticallContract;
 
@@ -162,7 +173,7 @@ export class StakingContract {
             ].forEach((x) => poolCalls.push(x));
             break;
 
-          case 'uni':
+          case TokenType.uni:
             poolContract = new MulticallContract(pool.lp.address, uniV2PairAbi);
             [
               poolContract.token0(),
@@ -170,10 +181,8 @@ export class StakingContract {
               poolContract.totalSupply(),
               poolContract.decimals(),
               poolContract.balanceOf(this.contractAddr),
+              poolContract.getReserves(),
             ].forEach((x) => poolCalls.push(x));
-            break;
-
-          default:
             break;
         }
         return poolCalls;
@@ -189,8 +198,9 @@ export class StakingContract {
         case TokenType.erc20:
           pools[i].lp.totalSupply = bnToUnit(callsRes[idx], callsRes[idx + 1]);
           pools[i].lp.decimals = callsRes[idx + 1];
-          pools[i].lp.reserve = bnToUnit(callsRes[idx + 2], callsRes[idx + 1]);
-          pools[i].stakedAmount = pools[i].lp.reserve;
+          const reserve = bnToUnit(callsRes[idx + 2], callsRes[idx + 1]);
+          pools[i].lp.reserve = reserve;
+          pools[i].stakedAmount = reserve;
           pools[i].underlyingTokens = [pools[i].lp];
           idx += 3;
           break;
@@ -200,11 +210,15 @@ export class StakingContract {
           const token1: Token = { address: callsRes[idx + 1] };
           const totalSupply = bnToUnit(callsRes[idx + 2], callsRes[idx + 3]);
           const stakedAmount = bnToUnit(callsRes[idx + 4], callsRes[idx + 3]);
+          const token0ReserveBN: BigNumber = callsRes[idx + 5][0];
+          const token1ReserveBN: BigNumber = callsRes[idx + 5][1];
           pools[i].lp.decimals = callsRes[idx + 3];
           pools[i].lp.totalSupply = totalSupply;
           pools[i].stakedAmount = stakedAmount;
+          token0.reserve = token0ReserveBN;
+          token1.reserve = token1ReserveBN;
           pools[i].underlyingTokens = [token0, token1];
-          idx += 5;
+          idx += 6;
           break;
       }
     });
@@ -218,6 +232,11 @@ export class StakingContract {
             break;
 
           case TokenType.uni:
+            const token0Reserve = pool.underlyingTokens![0].reserve as BigNumber;
+            const token1Reserve = pool.underlyingTokens![1].reserve as BigNumber;
+
+            if (token0Reserve.isZero() || token1Reserve.isZero()) break;
+
             const token0Contract = new MulticallContract(
               pool.underlyingTokens![0].address,
               erc20Abi
@@ -226,15 +245,13 @@ export class StakingContract {
               pool.underlyingTokens![1].address,
               erc20Abi
             );
-            const poolContract = new MulticallContract(
+            const uniContract = new MulticallContract(
               pool.lp.address,
               uniV2PairAbi
             );
-            [
-              token0Contract.decimals(),
-              token1Contract.decimals(),
-              poolContract.getReserves(),
-            ].forEach((x) => poolCalls.push(x));
+            [token0Contract.decimals(), token1Contract.decimals()].forEach(
+              (x) => poolCalls.push(x)
+            );
             break;
         }
         return poolCalls;
@@ -251,17 +268,25 @@ export class StakingContract {
           break;
 
         case TokenType.uni:
+          const token0Reserve = pool.underlyingTokens![0].reserve as BigNumber;
+          const token1Reserve = pool.underlyingTokens![1].reserve as BigNumber;
+
+          if (token0Reserve.isZero() || token1Reserve.isZero()) {
+            pools[i].underlyingTokens![0].reserve = 0;
+            pools[i].underlyingTokens![1].reserve = 0;
+            break;
+          }
           pools[i].underlyingTokens![0].decimals = uniCallsRes[idx];
           pools[i].underlyingTokens![1].decimals = uniCallsRes[idx + 1];
           pools[i].underlyingTokens![0].reserve = bnToUnit(
-            uniCallsRes[idx + 2][0],
+            token0Reserve,
             uniCallsRes[idx]
           );
           pools[i].underlyingTokens![1].reserve = bnToUnit(
-            uniCallsRes[idx + 2][1],
+            token1Reserve,
             uniCallsRes[idx + 1]
           );
-          idx += 3;
+          idx += 2;
           break;
       }
     });
@@ -302,12 +327,13 @@ export class StakingContract {
               this.rewardToken.price! *
               (pool.allocPoint / this.totalAllocPoints);
             const token0ReserveValue =
-              pool.underlyingTokens![0].reserve! * token0Price!;
+              pool.underlyingTokens![0].reserve! as number * token0Price!;
             const token1ReserveValue =
-              pool.underlyingTokens![1].reserve! * token1Price!;
-            apr =
-              (rewardPerYearValue / (token0ReserveValue + token1ReserveValue)) *
-              100;
+              pool.underlyingTokens![1].reserve! as number * token1Price!;
+            const totalReserveValue = token0ReserveValue + token1ReserveValue;
+            apr = totalReserveValue
+              ? (rewardPerYearValue / totalReserveValue) * 100
+              : 0;
           }
         }
       });

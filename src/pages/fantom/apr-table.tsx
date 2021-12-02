@@ -104,7 +104,6 @@ interface Aprs {
 const AprTablePage: NextPage = () => {
   const { provider, multicallProvider, chainId } = Connection.useContainer();
   const { getTokenByAddress, getTokenByName } = Prices.useContainer();
-  // const { spooky } = Spooky.useContainer();
   const [stakingContracts, setStakingContract] = useState<StakingContract[]>(
     []
   );
