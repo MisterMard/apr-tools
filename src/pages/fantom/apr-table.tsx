@@ -16,6 +16,7 @@ import soulMCAbi from "../../contracts/ABIs/soulMasterChef.json";
 import { Prices } from "../../components/Prices";
 import React from "react";
 import Table from "../../components/Table";
+import { CssBaseline } from "@material-ui/core";
 
 const MASTERCHEFS_INFO: MasterChefArgs[] = [
   {
@@ -203,6 +204,7 @@ const AprTablePage: NextPage = () => {
     <div>
       <Header />
       <h1>APR Comparison Table</h1>
+      <CssBaseline />
       <Table columns={tableData.columns} data={tableData.data} />
     </div>
   );

@@ -9,7 +9,7 @@ const Home: NextPage = () => {
       <Header/>
       <ul>
         <li>Ethereum</li>
-        <Link href="/fantom">Fantom</Link>
+        <li><Link href="/fantom">Fantom</Link></li>
         <li>...</li>
       </ul>
     </div>

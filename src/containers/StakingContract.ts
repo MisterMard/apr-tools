@@ -1,7 +1,6 @@
-import { BigNumber, Contract, ethers } from "ethers";
+import { BigNumber,ethers } from "ethers";
 import {
   Contract as MulticallContract,
-  ContractCall,
   Provider as MulticallProvider,
 } from "ethers-multicall";
 import { TokenObject } from "../components/Prices";
