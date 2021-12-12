@@ -173,6 +173,12 @@ const TOKENS: Record<string, TokenObject[]> = {
       address: "0x82f0b8b456c1a451378467398982d4834b6829c1",
       decimals: 18,
     },
+    {
+      name: "morph",
+      id: "morpheus-token",
+      address: "0x0789fF5bA37f72ABC4D561D00648acaDC897b32d",
+      decimals: 18,
+    },
 
 
     // non coinGecko tokens
@@ -210,6 +216,13 @@ const TOKENS: Record<string, TokenObject[]> = {
       address: "0xbf4906762C38F50bC7Be0A11BB452C944f6C72E1",
       decimals: 18,
       ethPair: "0xE69b45BE6260634de4e432F66179ce47EE846800",
+    },
+    {
+      name: "dKnight",
+      id: undefined,
+      address: "0x6cc0E0AedbbD3C35283e38668D959F6eb3034856",
+      decimals: 18,
+      ethPair: "0xD519AE779eb7987cdddA63be2CEffE0C35759E04",
     },
     
   ],

@@ -13,6 +13,8 @@ import hyperMCAbi from "../../contracts/ABIs/hyperjumpMasterChef.json";
 import zooMCAbi from "../../contracts/ABIs/zooMasterChef.json";
 import fBombMCAbi from "../../contracts/ABIs/fBombMasterChef.json";
 import soulMCAbi from "../../contracts/ABIs/soulMasterChef.json";
+import morpheusMCAbi from "../../contracts/ABIs/morpheusMasterChef.json";
+import dKnightMCAbi from "../../contracts/ABIs/dKnightMasterChef.json";
 import { Prices } from "../../components/Prices";
 import React from "react";
 import Table from "../../components/Table";
@@ -67,6 +69,20 @@ const MASTERCHEFS_INFO: MasterChefArgs[] = [
     rewardTokenAddress: "0xe2fb177009FF39F52C0134E8007FA0e4BaAcBd07",
     chefAbi: soulMCAbi,
     rewardRateFunctionString: "soulPerSecond",
+  },
+  {
+    name: "morpheus",
+    chefAddress: "0xc7dad2e953Dc7b11474151134737A007049f576E",
+    rewardTokenAddress: "0x0789fF5bA37f72ABC4D561D00648acaDC897b32d",
+    chefAbi: morpheusMCAbi,
+    rewardRateFunctionString: "morphPerSec",
+  },
+  {
+    name: "dKnight",
+    chefAddress: "0xb02e3A4B5ebC315137753e24b6Eb6aEF7D602E40",
+    rewardTokenAddress: "0x6cc0E0AedbbD3C35283e38668D959F6eb3034856",
+    chefAbi: dKnightMCAbi,
+    rewardRateFunctionString: "KnightPerBlock"
   },
 ];
 
